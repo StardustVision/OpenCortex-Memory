@@ -1,0 +1,20 @@
+{
+  "name": "opencortex-marketplace",
+  "owner": {
+    "name": "StardustVision"
+  },
+  "plugins": [
+    {
+      "name": "opencortex-memory",
+      "source": ".",
+      "description": "OpenCortex Memory Server — store, search, and reinforce AI agent memories via MCP with reward-based feedback scoring.",
+      "author": {
+        "name": "StardustVision"
+      },
+      "repository": "https://github.com/StardustVision/OpenCortex-Memory",
+      "license": "Apache-2.0",
+      "keywords": ["memory", "mcp", "qdrant", "vector-search", "reward-scoring"],
+      "category": "memory"
+    }
+  ]
+}
