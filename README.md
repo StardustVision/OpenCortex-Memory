@@ -1,35 +1,64 @@
 # opencortex-memory
 
-OpenCortex MCP server package for Claude Code, Codex, and other MCP clients.
+Persistent long-term memory for AI agents. Works with Claude Code, Codex CLI, Gemini CLI, and any MCP-compatible client.
 
-## Install
+Store, search, and recall memories across sessions — with reinforcement learning, semantic deduplication, and multi-tenant project isolation.
 
-**Claude Code:**
+## Quick Install
 
-```
-/plugin install
-```
-
-Select `opencortex-memory`, then run:
+### Claude Code
 
 ```bash
-npx opencortex-cli setup
+claude mcp add opencortex -- npx -y opencortex-memory
 ```
 
-The setup wizard will guide you through local/remote mode, server URL, and JWT token configuration.
+Or install via plugin marketplace:
 
-**Codex CLI:**
+```bash
+/plugin install
+# Select opencortex-memory
+```
+
+### Codex CLI
 
 ```bash
 codex mcp add opencortex -- npx -y opencortex-memory
+```
+
+### Gemini CLI
+
+```bash
+gemini mcp add opencortex -- npx -y opencortex-memory
+```
+
+### Manual (any MCP client)
+
+Add to your MCP config file (`~/.claude/mcp.json`, `codex-mcp.json`, etc.):
+
+```json
+{
+  "mcpServers": {
+    "opencortex": {
+      "command": "npx",
+      "args": ["-y", "opencortex-memory"]
+    }
+  }
+}
+```
+
+## Setup
+
+After installing, run the interactive setup wizard:
+
+```bash
 npx opencortex-cli setup
 ```
 
-**Run directly:**
+The wizard walks you through:
 
-```bash
-npx -y opencortex-memory
-```
+1. **Mode** — `local` (self-hosted) or `remote` (connect to a server)
+2. **Server URL** — where the backend runs (default: `http://127.0.0.1:8921`)
+3. **JWT token** — for authentication (optional in local mode)
 
 ## Verify
 
@@ -37,23 +66,61 @@ npx -y opencortex-memory
 npx opencortex-cli health
 ```
 
+Expected output: server status, version, and connectivity check.
+
 ## Configuration
 
-The setup wizard writes config to `~/.opencortex/mcp.json`. You can also edit it manually:
+Config is stored at `~/.opencortex/mcp.json`. You can edit it manually:
 
 ```json
 {
-  "mode": "remote",
-  "token": "<jwt-token>",
+  "mode": "local",
+  "token": "",
+  "local": { "http_port": 8921, "ui_port": 5920 },
   "remote": { "http_url": "http://your-server:8921" }
 }
 ```
 
-Config search order: `./mcp.json` (project) > `~/.opencortex/mcp.json` (global).
+**Config search order:** `./mcp.json` (project-level) > `~/.opencortex/mcp.json` (global).
 
-Environment variable overrides: `OPENCORTEX_MODE`, `OPENCORTEX_HTTP_URL`, `OPENCORTEX_TOKEN`, `OPENCORTEX_HTTP_PORT`.
+**Environment overrides:**
 
-## Included binaries
+| Variable | Description | Default |
+|---|---|---|
+| `OPENCORTEX_MODE` | `local` or `remote` | `local` |
+| `OPENCORTEX_HTTP_URL` | Backend server URL | `http://127.0.0.1:8921` |
+| `OPENCORTEX_HTTP_PORT` | Local server port | `8921` |
+| `OPENCORTEX_TOKEN` | JWT auth token | — |
+| `OPENCORTEX_UI_PORT` | Web UI port | `5920` |
 
-- `opencortex-mcp` — MCP stdio server
-- `opencortex-cli` — CLI (setup, health, store, recall, status, feedback, decay)
+## MCP Tools
+
+| Tool | Description |
+|---|---|
+| `recall` | Search long-term memory (call before every response) |
+| `add_message` | Record a conversation turn (call after every response) |
+| `end` | End session and trigger knowledge extraction |
+| `store` | Persist a new memory with semantic dedup |
+| `batch_store` | Bulk import documents |
+| `search` | Natural language memory search |
+| `feedback` | Reinforce (+1.0) or penalize (-1.0) a memory |
+| `forget` | Delete a memory by URI or query |
+| `decay` | Apply time-decay to inactive memories |
+| `system_status` | Health check and diagnostics |
+| `memory_index` | Lightweight index of all stored memories |
+
+## Included Binaries
+
+| Binary | Description |
+|---|---|
+| `opencortex-mcp` | MCP stdio server (auto-started by your AI client) |
+| `opencortex-cli` | CLI tool — `setup`, `health`, `store`, `recall`, `status`, `feedback`, `decay` |
+
+## Requirements
+
+- Node.js >= 18
+- For local mode: Python 3.10+ with `uv` or `pip` (to run the backend server)
+
+## License
+
+MIT
