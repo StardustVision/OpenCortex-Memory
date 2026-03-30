@@ -1,0 +1,161 @@
+# OpenCortex Memory
+
+> MCP server for AI agent long-term memory with reinforcement learning, vector search, and multi-tenant isolation.
+
+## Overview
+
+OpenCortex Memory is a Model Context Protocol (MCP) server that gives AI agents persistent memory across sessions. It uses Qdrant vector search for semantic retrieval and reward-based feedback scoring to surface the most relevant memories over time. Memories are automatically deduplicated, decayed over time, and reinforced by usage.
+
+Key capabilities:
+- Store, search, and recall memories via MCP tools
+- Reinforcement learning: reward/penalize memories to improve retrieval ranking
+- Automatic semantic deduplication
+- Multi-tenant project-based isolation
+- Dual mode: local (self-hosted) or remote (JWT-authenticated)
+- Graceful degradation: network/auth failures don't block user responses
+
+## Install
+
+Claude Code: `/plugin install` → select `opencortex-memory` → `npx opencortex-cli setup`
+Codex CLI: `codex mcp add opencortex -- npx -y opencortex-memory && npx opencortex-cli setup`
+Direct: `npx -y opencortex-memory`
+
+Verify: `npx opencortex-cli health`
+
+## MCP Tools — Lifecycle (mandatory every turn)
+
+### recall
+Search long-term memory for relevant context. Called before every response.
+- `query` (required, string) — user message or search query
+- `max_items` (integer, default=5) — max results to return
+- `detail_level` (string, default="l1") — l0: abstract only, l1: + overview, l2: + full content
+- `category` (string) — filter: profile | preferences | entities | events | cases | patterns | error_fixes | workflows | strategies | documents | plans
+- `context_type` (string) — filter: memory | resource | skill
+- `include_knowledge` (boolean, default=false) — search knowledge base
+- Returns: `{memory[], knowledge[], instructions}`
+
+### add_message
+Record a conversation turn for future learning. Called after every response.
+- `user_message` (required, string) — user's message
+- `assistant_response` (required, string) — conversational conclusion only (no code/tool output)
+- `tool_calls` (array) — [{name, summary}]
+- `cited_uris` (array) — opencortex:// URIs referenced in the response
+
+### end
+End session and trigger knowledge extraction. Called on exit or when user says goodbye.
+
+## MCP Tools — Memory Operations
+
+### store
+Persist explicit knowledge: preferences, facts, decisions, corrections. Auto semantic dedup.
+- `abstract` (required, string) — one-sentence summary for ranking
+- `content` (string, default="") — full details; 500+ chars triggers auto-structured overview
+- `category` (string) — semantic type: profile | preferences | entities | events | cases | patterns | error_fixes | workflows | strategies | documents | plans
+- `context_type` (string, default="memory") — storage type: memory | resource | skill
+- `meta` (object) — arbitrary metadata (e.g., source, language)
+- `dedup` (boolean, default=true) — enable semantic dedup
+- Returns: `{uri, context_type, category, abstract, dedup_action?}`
+
+### batch_store
+Bulk import multiple documents.
+- `documents` (required, array) — array of store-format objects
+- Returns: `{stored, skipped, errors}`
+
+### search
+Search stored memories by natural language query with intent-aware retrieval.
+- `query` (required, string) — natural language query
+- `limit` (integer, default=5) — max results
+- `context_type` (string) — restrict to: memory | resource | skill
+- `category` (string) — restrict by category
+- Returns: `{results[], total}`
+
+### feedback
+Reinforce or penalize a memory via reward signal to adjust future retrieval ranking.
+- `uri` (required, string) — opencortex:// URI of the memory
+- `reward` (required, number) — reward signal, range: -1.0 to 1.0
+- Returns: `{status, uri, new_score}`
+
+### forget
+Delete a memory permanently by URI or semantic query.
+- `uri` (string) — specific memory URI to delete
+- `query` (string) — semantic query to find and delete matching memory
+- Returns: `{status, forgotten, uri}`
+
+### decay
+Apply time-decay to all memories. Frequently accessed memories resist decay. Maintenance function.
+- Returns: `{status, decayed_count, removed_count}`
+
+### system_status
+Health check and diagnostics.
+- `type` (string, default="health") — health | stats | doctor
+- Returns: memory count, storage stats, component status
+
+## Memory Categories
+
+| Category | Description |
+|----------|-------------|
+| profile | User profile information |
+| preferences | User preferences and settings |
+| entities | People, projects, organizations |
+| events | Meetings, deadlines, milestones |
+| cases | Use cases, scenarios, examples |
+| patterns | Code patterns, design patterns |
+| error_fixes | Bug fixes, error resolutions |
+| workflows | Processes, procedures |
+| strategies | Plans, approaches, methodologies |
+| documents | Reference documents |
+| plans | Project plans, roadmaps |
+
+## Context Types
+
+| Type | Description |
+|------|-------------|
+| memory | General memories (default) |
+| resource | Reference resources |
+| skill | Learned skills and procedures |
+
+## Configuration
+
+Config file location (discovery order):
+1. `./mcp.json` (project-local)
+2. `~/.opencortex/mcp.json` (global)
+
+```json
+{
+  "mode": "remote",
+  "token": "<jwt-token>",
+  "local": { "http_port": 8921, "ui_port": 5920 },
+  "remote": { "http_url": "http://127.0.0.1:8921" }
+}
+```
+
+Environment variable overrides:
+- `OPENCORTEX_MODE` — local | remote
+- `OPENCORTEX_TOKEN` — JWT authentication token
+- `OPENCORTEX_HTTP_PORT` — local HTTP port (default 8921)
+- `OPENCORTEX_HTTP_URL` — remote server URL
+- `OPENCORTEX_UI_PORT` — console UI port (default 5920)
+
+## CLI Commands
+
+Setup & Health:
+- `opencortex-cli setup` — Interactive setup wizard
+- `opencortex-cli health` — Quick liveness check
+- `opencortex-cli status` — Full system status
+
+Memory Operations:
+- `opencortex-cli recall <query>` — Search memories (-k for top-k)
+- `opencortex-cli store <text>` — Store a memory (-c for category)
+- `opencortex-cli stats` — Memory statistics
+- `opencortex-cli feedback <uri> <reward>` — Apply RL feedback
+- `opencortex-cli decay` — Apply maintenance decay
+
+## Included Binaries
+
+- `opencortex-mcp` — MCP stdio server
+- `opencortex-cli` — CLI (setup, health, store, recall, status, feedback, decay)
+
+## Links
+
+- Repository: https://github.com/StardustVision/OpenCortex-Memory
+- License: Apache-2.0

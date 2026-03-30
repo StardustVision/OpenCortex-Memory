@@ -6,7 +6,10 @@
   "plugins": [
     {
       "name": "opencortex-memory",
-      "source": ".",
+      "source": {
+        "source": "github",
+        "repo": "StardustVision/OpenCortex-Memory"
+      },
       "description": "OpenCortex Memory Server — store, search, and reinforce AI agent memories via MCP with reward-based feedback scoring.",
       "author": {
         "name": "StardustVision"

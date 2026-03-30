@@ -1,0 +1,43 @@
+# OpenCortex Memory
+
+> MCP server for AI agent long-term memory with reinforcement learning, vector search, and multi-tenant isolation.
+
+## Overview
+
+OpenCortex Memory is a Model Context Protocol (MCP) server that gives AI agents persistent memory across sessions. It uses Qdrant vector search for semantic retrieval and reward-based feedback scoring to surface the most relevant memories over time.
+
+Key capabilities:
+- Store, search, and recall memories via MCP tools
+- Reinforcement learning: reward/penalize memories to improve retrieval ranking
+- Automatic semantic deduplication
+- Multi-tenant project-based isolation
+- Dual mode: local (self-hosted) or remote (JWT-authenticated)
+
+## Install
+
+Claude Code: `/plugin install` → select `opencortex-memory` → `npx opencortex-cli setup`
+Codex CLI: `codex mcp add opencortex -- npx -y opencortex-memory && npx opencortex-cli setup`
+Direct: `npx -y opencortex-memory`
+
+## MCP Tools
+
+- `recall`: Search long-term memory for relevant context (called before every response)
+- `add_message`: Record a conversation turn for future learning (called after every response)
+- `end`: End session and trigger knowledge extraction
+- `store`: Persist explicit knowledge — preferences, facts, decisions, corrections
+- `batch_store`: Bulk import multiple documents
+- `search`: Search stored memories by natural language query
+- `feedback`: Reinforce or penalize a memory via reward signal (adjusts future ranking)
+- `forget`: Delete a memory permanently by URI or semantic query
+- `decay`: Apply time-decay to all memories (maintenance)
+- `system_status`: Health check and diagnostics
+
+## Configuration
+
+Config file: `~/.opencortex/mcp.json`
+Environment overrides: `OPENCORTEX_MODE`, `OPENCORTEX_HTTP_URL`, `OPENCORTEX_TOKEN`, `OPENCORTEX_HTTP_PORT`
+
+## Links
+
+- Repository: https://github.com/StardustVision/OpenCortex-Memory
+- License: Apache-2.0
