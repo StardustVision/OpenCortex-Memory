@@ -12,11 +12,11 @@ Store, search, and recall memories across sessions — with reinforcement learni
 claude mcp add opencortex -- npx -y opencortex-memory
 ```
 
-Or install via plugin marketplace:
+Or install via marketplace:
 
 ```bash
-/plugin install
-# Select opencortex-memory
+/plugin marketplace add StardustVision/OpenCortex-Memory
+/plugin install opencortex-memory@StardustVision
 ```
 
 ### Codex CLI
