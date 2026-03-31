@@ -30,6 +30,8 @@ const HTTP_URL = TEST_MODE === 'remote'
   ? (MCP_CONFIG.remote?.http_url || 'http://127.0.0.1:8921')
   : 'http://127.0.0.1:8921';
 
+const PKG = JSON.parse(readFileSync(join(PROJECT_ROOT, 'package.json'), 'utf8'));
+
 // ── helpers ────────────────────────────────────────────────────────────
 
 async function healthCheck() {
@@ -133,18 +135,19 @@ describe('MCP Server (Node.js stdio proxy)', async () => {
         clientInfo: { name: 'test', version: '1.0' },
       });
       assert.equal(initRes.result.serverInfo.name, 'opencortex');
-      assert.equal(initRes.result.serverInfo.version, '0.5.0');
+      assert.equal(initRes.result.serverInfo.version, PKG.version);
 
       const toolsRes = await client.request('tools/list');
       const names = toolsRes.result.tools.map(t => t.name);
-      for (const expected of [
-        'store', 'batch_store', 'search', 'feedback', 'decay',
-        'system_status',
+      const EXPECTED_TOOLS = [
+        'store', 'batch_store', 'search', 'feedback', 'forget', 'decay',
+        'system_status', 'memory_index',
         'recall', 'add_message', 'end',
-      ]) {
+      ];
+      for (const expected of EXPECTED_TOOLS) {
         assert.ok(names.includes(expected), `Missing tool: ${expected}`);
       }
-      assert.equal(names.length, 9, `Expected 9 tools, got ${names.length}: ${names.join(', ')}`);
+      assert.equal(names.length, EXPECTED_TOOLS.length, `Expected ${EXPECTED_TOOLS.length} tools, got ${names.length}: ${names.join(', ')}`);
 
       // Verify old tools are NOT present
       for (const removed of [
