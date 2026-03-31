@@ -20,6 +20,11 @@ Commands:
   context-commit <user_msg> <assistant_msg>
                      Test commit via /api/v1/context (commit phase)
   context-end         Test end via /api/v1/context (end phase)
+  insights-generate [days]
+                     Generate insights report (default: 7 days)
+  insights-latest    Get latest insights report
+  insights-history [limit]
+                     Get insights report history (default: 10)
 
 Options:
   --top-k, -k <n>    Number of results for recall (default: 5)
@@ -164,6 +169,26 @@ async function main() {
         session_id: sessionId,
         phase: 'end',
       });
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+
+    case 'insights-generate': {
+      const days = parseInt(positionals[1], 10) || 7;
+      const data = await httpPost(`${httpUrl}/api/v1/insights/generate?days=${days}`, {}, 300000);
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+
+    case 'insights-latest': {
+      const data = await httpGet(`${httpUrl}/api/v1/insights/latest`);
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+
+    case 'insights-history': {
+      const limit = parseInt(positionals[1], 10) || 10;
+      const data = await httpGet(`${httpUrl}/api/v1/insights/history?limit=${limit}`);
       console.log(JSON.stringify(data, null, 2));
       break;
     }
