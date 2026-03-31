@@ -43,7 +43,7 @@ function discoverFiles(dir) {
     const output = execSync('git ls-files --cached --others --exclude-standard', {
       cwd: dir, stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024,
     });
-    return output.trim().split('\n').filter(Boolean).map(f => join(dir, f));
+    return output.trim().split(/\r?\n/).filter(Boolean).map(f => join(dir, f));
   } catch {
     // Fallback: recursive walk
     return walkDir(dir);
@@ -85,11 +85,19 @@ const files = discoverFiles(targetDir)
     try { return statSync(f).size <= MAX_FILE_SIZE; } catch { return false; }
   });
 
-const items = files.map(f => {
+const items = [];
+for (const f of files) {
   const relPath = relative(targetDir, f);
   const ext = extname(f).toLowerCase();
-  const content = readFileSync(f, 'utf-8');
-  return {
+  let content;
+  try {
+    content = readFileSync(f, 'utf-8');
+  } catch (err) {
+    process.stderr.write(`[oc-scan] skipping ${relPath}: ${err.message}\n`);
+    continue;
+  }
+  items.push({
+    abstract: relPath,
     content,
     category: 'documents',
     context_type: 'resource',
@@ -98,8 +106,8 @@ const items = files.map(f => {
       file_path: relPath,
       file_type: fileType(ext),
     },
-  };
-});
+  });
+}
 
 const output = {
   items,
