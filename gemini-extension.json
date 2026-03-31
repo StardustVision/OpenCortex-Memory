@@ -1,13 +1,12 @@
 {
   "name": "opencortex-memory",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "OpenCortex Memory Server — AI agent memory with reinforcement learning and multi-tenant isolation.",
   "author": "StardustVision",
   "mcpServers": {
     "opencortex": {
-      "command": "node",
-      "args": ["${extensionPath}${/}lib${/}mcp-server.mjs"],
-      "cwd": "${extensionPath}"
+      "command": "npx",
+      "args": ["-y", "opencortex-memory"]
     }
   }
 }
