@@ -114,7 +114,7 @@ export async function handleAddMessage(
   args: Record<string, unknown>,
   sessionId: string,
   httpUrl: string,
-): Promise<{ accepted: true; turn_id: string }> {
+): Promise<{ queued: true; turn_id: string }> {
   const turnId = _lastRecallTurnId || `t${++_turnCounter}`;
 
   const body: ContextRequest = {
@@ -131,7 +131,7 @@ export async function handleAddMessage(
 
   // Fire-and-forget: recording conversation should never block Claude
   fireAndForget(() => httpContextCall(body, httpUrl), `add_message:${turnId}`);
-  return { accepted: true, turn_id: turnId };
+  return { queued: true, turn_id: turnId };
 }
 
 export async function handleEnd(

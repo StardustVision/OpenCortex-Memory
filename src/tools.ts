@@ -103,7 +103,7 @@ export const TOOLS: Record<string, ToolDef> = {
 
 // ── Tools that fire-and-forget (results not critical) ───────────────────
 
-export const FIRE_AND_FORGET_PROXY = new Set(['store', 'batch_store', 'feedback', 'decay']);
+export const FIRE_AND_FORGET_PROXY = new Set(['feedback', 'decay']);
 
 // ── Build JSON Schema for MCP tools/list ────────────────────────────────
 

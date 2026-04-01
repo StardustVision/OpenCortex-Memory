@@ -129,12 +129,14 @@ describe('MCP Server (TypeScript + SDK)', async () => {
     } finally { client.close(); }
   });
 
-  it('02 store (fire-and-forget)', async () => {
+  it('02 store', async () => {
     const client = createMcpClient();
     try {
       await client.init();
       const data = await client.callTool('store', { abstract: 'User prefers dark theme', category: 'preferences' });
-      assert.ok(data.queued, 'store should return queued: true');
+      assert.ok(data.uri, 'Should return URI');
+      assert.equal(data.context_type, 'memory');
+      assert.equal(data.category, 'preferences');
     } finally { client.close(); }
   });
 
@@ -211,7 +213,7 @@ describe('MCP Server (TypeScript + SDK)', async () => {
         user_message: 'How do we deploy?',
         assistant_response: 'We use Docker containers for deployment.',
       });
-      assert.ok(commitResult.accepted);
+      assert.ok(commitResult.queued, 'add_message should return queued: true');
       assert.ok(commitResult.turn_id);
 
       const endResult = await client.callTool('end', {});
