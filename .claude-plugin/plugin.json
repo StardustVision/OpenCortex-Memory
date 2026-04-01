@@ -1,6 +1,6 @@
 {
   "name": "opencortex-memory",
-  "version": "0.6.6",
+  "version": "0.7.0",
   "description": "OpenCortex Memory Server — AI agent memory with reinforcement learning and multi-tenant isolation.",
   "author": {
     "name": "StardustVision"
