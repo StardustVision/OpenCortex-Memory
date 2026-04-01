@@ -1,38 +1,27 @@
-/**
- * Interactive setup wizard for OpenCortex MCP plugin.
- *
- * Usage:  opencortex-cli setup
- *
- * Guides the user through local/remote mode selection, writes
- * ~/.opencortex/mcp.json, tests connectivity, and optionally
- * registers the MCP server at Claude Code user level.
- */
-
-import { createInterface } from 'node:readline';
+import { createInterface, type Interface } from 'node:readline';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_MCP_CONFIG, writeMcpConfig, getHttpUrl } from './common.mjs';
-import { healthCheck } from './http-client.mjs';
+import { DEFAULT_MCP_CONFIG, writeMcpConfig } from './config.js';
+import { healthCheck } from './http-client.js';
+import type { McpConfig } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const MCP_SERVER_PATH = join(__dirname, 'mcp-server.mjs');
+const MCP_SERVER_PATH = join(__dirname, 'server.mjs');
 
-// ── helpers ──────────────────────────────────────────────────────────────
-
-function createRL() {
+function createRL(): Interface {
   return createInterface({ input: process.stdin, output: process.stdout });
 }
 
-function ask(rl, question) {
-  return new Promise((resolve, reject) => {
+function ask(rl: Interface, question: string): Promise<string> {
+  return new Promise((resolve) => {
     rl.question(question, answer => resolve(answer.trim()));
     rl.once('close', () => resolve(''));
   });
 }
 
-async function askChoice(rl, question, choices) {
+async function askChoice(rl: Interface, question: string, choices: string[]): Promise<string> {
   const labels = choices.map((c, i) => `  ${i + 1}) ${c}`).join('\n');
   while (true) {
     const answer = await ask(rl, `${question}\n${labels}\n> `);
@@ -42,44 +31,34 @@ async function askChoice(rl, question, choices) {
   }
 }
 
-// ── main ─────────────────────────────────────────────────────────────────
-
-export async function runSetup() {
+export async function runSetup(): Promise<void> {
   const rl = createRL();
 
   try {
     console.log('\n=== OpenCortex Setup ===\n');
 
-    // 1. Mode selection
-    const mode = await askChoice(rl, 'Select mode:', ['local', 'remote']);
-
-    const config = { ...DEFAULT_MCP_CONFIG, mode };
+    const mode = await askChoice(rl, 'Select mode:', ['local', 'remote']) as McpConfig['mode'];
+    const config: Partial<McpConfig> = { ...DEFAULT_MCP_CONFIG, mode };
 
     if (mode === 'remote') {
-      // 2a. Remote: URL + token
       const url = await ask(rl, `Server URL [${DEFAULT_MCP_CONFIG.remote.http_url}]: `);
       if (url) config.remote = { http_url: url };
-
       const token = await ask(rl, 'JWT token: ');
       if (token) config.token = token;
     } else {
-      // 2b. Local: port + optional token
       const port = await ask(rl, `HTTP port [${DEFAULT_MCP_CONFIG.local.http_port}]: `);
       if (port) {
         const parsed = parseInt(port, 10);
         config.local = { http_port: Number.isFinite(parsed) ? parsed : DEFAULT_MCP_CONFIG.local.http_port };
         if (!Number.isFinite(parsed)) console.log(`Invalid port "${port}", using default ${DEFAULT_MCP_CONFIG.local.http_port}`);
       }
-
       const token = await ask(rl, 'JWT token (optional, press Enter to skip): ');
       if (token) config.token = token;
     }
 
-    // 3. Write config
     const configPath = writeMcpConfig(config);
     console.log(`\nConfig saved to ${configPath}`);
 
-    // 4. Health check
     const httpUrl = mode === 'remote'
       ? (config.remote?.http_url || DEFAULT_MCP_CONFIG.remote.http_url)
       : `http://127.0.0.1:${config.local?.http_port || DEFAULT_MCP_CONFIG.local.http_port}`;
@@ -88,43 +67,24 @@ export async function runSetup() {
     const ok = await healthCheck(httpUrl);
     console.log(ok ? 'OK' : 'UNREACHABLE (you can configure the server later)');
 
-    // 5. Offer Claude Code user-level MCP registration
     let registerClaude = 'no';
     try {
-      registerClaude = await askChoice(
-        rl,
-        '\nRegister as Claude Code user-level MCP server? (all projects will have access)',
-        ['yes', 'no'],
-      );
-    } catch { /* readline closed (e.g., piped input) — skip */ }
+      registerClaude = await askChoice(rl, '\nRegister as Claude Code user-level MCP server? (all projects will have access)', ['yes', 'no']);
+    } catch { /* readline closed */ }
 
     if (registerClaude === 'yes') {
       try {
-        // Build argument list — no shell interpolation, safe for tokens with special chars
-        const cmdArgs = [
-          'mcp', 'add', '-s', 'user', 'opencortex',
-          '-e', `OPENCORTEX_MODE=${mode}`,
-        ];
-        if (config.token) {
-          cmdArgs.push('-e', `OPENCORTEX_TOKEN=${config.token}`);
-        }
-        if (mode === 'remote' && config.remote?.http_url) {
-          cmdArgs.push('-e', `OPENCORTEX_HTTP_URL=${config.remote.http_url}`);
-        }
-        if (mode === 'local' && config.local?.http_port) {
-          cmdArgs.push('-e', `OPENCORTEX_HTTP_PORT=${config.local.http_port}`);
-        }
+        const cmdArgs = ['mcp', 'add', '-s', 'user', 'opencortex', '-e', `OPENCORTEX_MODE=${mode}`];
+        if (config.token) cmdArgs.push('-e', `OPENCORTEX_TOKEN=${config.token}`);
+        if (mode === 'remote' && config.remote?.http_url) cmdArgs.push('-e', `OPENCORTEX_HTTP_URL=${config.remote.http_url}`);
+        if (mode === 'local' && config.local?.http_port) cmdArgs.push('-e', `OPENCORTEX_HTTP_PORT=${config.local.http_port}`);
         cmdArgs.push('--', 'node', MCP_SERVER_PATH);
-
         console.log(`\nRunning: claude ${cmdArgs.join(' ')}`);
         execFileSync('claude', cmdArgs, { stdio: 'inherit' });
         console.log('Registered successfully.');
-      } catch {
-        console.log('Failed to register. You can run the command manually later.');
-      }
+      } catch { console.log('Failed to register. You can run the command manually later.'); }
     }
 
-    // 6. Summary
     console.log('\n=== Setup Complete ===');
     console.log(`  Mode:   ${mode}`);
     console.log(`  Server: ${httpUrl}`);
@@ -134,13 +94,10 @@ export async function runSetup() {
     } else if (mode === 'local') {
       console.log('\nServer not reachable. Start the local server first:');
       console.log(`  uv run opencortex-server --host 127.0.0.1 --port ${config.local?.http_port || DEFAULT_MCP_CONFIG.local.http_port}`);
-      console.log('\nOr via Docker:');
-      console.log('  docker compose up -d');
-      console.log('\nThen verify with:');
-      console.log('  npx opencortex-cli health\n');
+      console.log('\nOr via Docker:\n  docker compose up -d');
+      console.log('\nThen verify with:\n  npx opencortex-cli health\n');
     } else {
-      console.log('\nServer not reachable yet. Check your remote server, then verify with:');
-      console.log('  npx opencortex-cli health\n');
+      console.log('\nServer not reachable yet. Check your remote server, then verify with:\n  npx opencortex-cli health\n');
     }
   } finally {
     rl.close();

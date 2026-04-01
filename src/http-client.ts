@@ -1,20 +1,15 @@
-// HTTP client using native fetch (Node.js >= 18)
 import { Agent, setGlobalDispatcher } from 'undici';
-import { getMcpConfig, getProjectId } from './common.mjs';
+import { getMcpConfig } from './config.js';
+import { getProjectId } from './project.js';
 
 setGlobalDispatcher(new Agent({
   keepAliveTimeout: 30_000,
   connections: 10,
 }));
 
-/**
- * Build per-request HTTP headers from MCP config.
- * Uses JWT Bearer token for authentication (identity extracted from claims).
- * Retains X-Project-ID (project dimension is not in the JWT).
- */
-export function buildClientHeaders() {
-  const hdrs = {};
-  const token = getMcpConfig('token', '');
+export function buildClientHeaders(): Record<string, string> {
+  const hdrs: Record<string, string> = {};
+  const token = getMcpConfig('token', '') as string;
   if (token) {
     hdrs['Authorization'] = `Bearer ${token}`;
   }
@@ -22,7 +17,12 @@ export function buildClientHeaders() {
   return hdrs;
 }
 
-export async function httpPost(url, data, timeoutMs = 10000, extraHeaders = {}) {
+export async function httpPost(
+  url: string,
+  data: unknown,
+  timeoutMs = 10000,
+  extraHeaders: Record<string, string> = {},
+): Promise<unknown> {
   const headers = { 'Content-Type': 'application/json', ...buildClientHeaders(), ...extraHeaders };
   const res = await fetch(url, {
     method: 'POST',
@@ -34,7 +34,11 @@ export async function httpPost(url, data, timeoutMs = 10000, extraHeaders = {}) 
   return res.json();
 }
 
-export async function httpGet(url, timeoutMs = 5000, extraHeaders = {}) {
+export async function httpGet(
+  url: string,
+  timeoutMs = 5000,
+  extraHeaders: Record<string, string> = {},
+): Promise<unknown> {
   const headers = { ...buildClientHeaders(), ...extraHeaders };
   const res = await fetch(url, {
     headers,
@@ -44,20 +48,19 @@ export async function httpGet(url, timeoutMs = 5000, extraHeaders = {}) {
   return res.json();
 }
 
-/**
- * Batch message recording for Observer debounce buffer.
- * @param {string} httpUrl - Server base URL
- * @param {string} sessionId - Session identifier
- * @param {Array<{role: string, content: string}>} messages - Messages to record
- */
-export async function sessionMessagesBatch(httpUrl, sessionId, messages, timeoutMs = 5000) {
+export async function sessionMessagesBatch(
+  httpUrl: string,
+  sessionId: string,
+  messages: Array<{ role: string; content: string }>,
+  timeoutMs = 5000,
+): Promise<unknown> {
   return httpPost(`${httpUrl}/api/v1/session/messages`, {
     session_id: sessionId,
     messages,
   }, timeoutMs);
 }
 
-export async function healthCheck(httpUrl, timeoutMs = 3000) {
+export async function healthCheck(httpUrl: string, timeoutMs = 3000): Promise<boolean> {
   try {
     const res = await fetch(`${httpUrl}/api/v1/memory/health`, {
       signal: AbortSignal.timeout(timeoutMs),
