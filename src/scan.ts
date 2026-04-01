@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { execSync } from 'node:child_process';
 import { readFileSync, statSync, readdirSync } from 'node:fs';
 import { join, relative, extname, basename } from 'node:path';

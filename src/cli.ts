@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { getHttpUrl } from './config.js';
 import { httpPost, httpGet, healthCheck } from './http-client.js';
