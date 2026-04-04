@@ -19,6 +19,9 @@ Commands:
   context-commit <user_msg> <assistant_msg>
                      Test commit via /api/v1/context (commit phase)
   context-end         Test end via /api/v1/context (end phase)
+  memory-list        List memories with pagination
+  content-read <uri> Read full content of a memory by URI
+  promote <uri...>   Promote memories to shared scope
   insights-generate [days]
                      Generate insights report (default: 7 days)
   insights-latest    Get latest insights report
@@ -28,6 +31,10 @@ Commands:
 Options:
   --top-k, -k <n>    Number of results for recall (default: 5)
   --category, -c <s>  Category for store
+  --context-type, -t <s> Filter by context type (memory|resource|skill)
+  --limit, -l <n>     Page size (default: 50)
+  --offset, -o <n>    Pagination offset (default: 0)
+  --project-id, -p <s> Project ID for promote
   --session-id, -s <s> Session ID for context commands (default: auto-generated)
   --help, -h          Show this help
 `;
@@ -36,10 +43,14 @@ async function main(): Promise<void> {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
-      'top-k':      { type: 'string', short: 'k', default: '5' },
-      'category':   { type: 'string', short: 'c', default: '' },
-      'session-id': { type: 'string', short: 's', default: '' },
-      'help':       { type: 'boolean', short: 'h', default: false },
+      'top-k':        { type: 'string', short: 'k', default: '5' },
+      'category':     { type: 'string', short: 'c', default: '' },
+      'context-type': { type: 'string', short: 't', default: '' },
+      'limit':        { type: 'string', short: 'l', default: '50' },
+      'offset':       { type: 'string', short: 'o', default: '0' },
+      'project-id':   { type: 'string', short: 'p', default: '' },
+      'session-id':   { type: 'string', short: 's', default: '' },
+      'help':         { type: 'boolean', short: 'h', default: false },
     },
   });
 
@@ -136,6 +147,37 @@ async function main(): Promise<void> {
     }
     case 'context-end': {
       const data = await httpPost(`${httpUrl}/api/v1/context`, { session_id: sessionId, phase: 'end' });
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+    case 'memory-list': {
+      const qs = new URLSearchParams();
+      if (values.category) qs.set('category', values.category);
+      if (values['context-type']) qs.set('context_type', values['context-type']);
+      qs.set('limit', values.limit!);
+      qs.set('offset', values.offset!);
+      const data = await httpGet(`${httpUrl}/api/v1/memory/list?${qs}`);
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+    case 'content-read': {
+      const uri = positionals.slice(1).join(' ');
+      if (!uri) { console.error('Usage: opencortex-cli content-read <uri>'); process.exit(1); }
+      const data = await httpGet(`${httpUrl}/api/v1/content/read?uri=${encodeURIComponent(uri)}`);
+      const result = (data as Record<string, unknown>).result;
+      console.log(typeof result === 'string' ? result : JSON.stringify(data, null, 2));
+      break;
+    }
+    case 'promote': {
+      const uris = positionals.slice(1);
+      if (!uris.length || !values['project-id']) {
+        console.error('Usage: opencortex-cli promote <uri...> --project-id <id>');
+        process.exit(1);
+      }
+      const data = await httpPost(`${httpUrl}/api/v1/memory/promote_to_shared`, {
+        uris,
+        project_id: values['project-id'],
+      });
       console.log(JSON.stringify(data, null, 2));
       break;
     }

@@ -69,6 +69,31 @@ export const TOOLS: Record<string, ToolDef> = {
       context_type: { type: 'string', description: 'Comma-separated types to include (memory,resource,skill,case,pattern). Omit for all' },
       limit:        { type: 'integer', description: 'Max records to return', default: 200 },
     }],
+  memory_list: ['GET', '/api/v1/memory/list',
+    'List accessible memories with pagination. Unlike memory_index (lightweight summary) '
+    + 'and search (semantic query), this returns a flat paginated list of all records. '
+    + 'Returns {results: [{uri, abstract, context_type, category, ...}], total}.', {
+      category:     { type: 'string',  description: 'Filter by category (e.g. "preferences", "error_fixes"). Omit for all' },
+      context_type: { type: 'string',  description: 'Filter by type: memory | resource | skill. Omit for all' },
+      limit:        { type: 'integer', description: 'Page size', default: 50 },
+      offset:       { type: 'integer', description: 'Skip first N records for pagination', default: 0 },
+    }],
+  content_read: ['GET', '/api/v1/content/read',
+    'Read the full L2 content of a memory by URI. Use when you have a URI '
+    + '(from search or memory_list) and need the complete stored text. '
+    + 'Supports chunked reading via offset/limit for large documents. '
+    + 'Returns {status, result}.', {
+      uri:    { type: 'string',  description: 'The opencortex:// URI to read', required: true },
+      offset: { type: 'integer', description: 'Character offset to start reading from', default: 0 },
+      limit:  { type: 'integer', description: 'Max characters to return (-1 for all)', default: -1 },
+    }],
+  promote_to_shared: ['POST', '/api/v1/memory/promote_to_shared',
+    'Promote private memories to shared scope so they are visible to all users '
+    + 'in the same project. Useful for sharing decisions, patterns, or reference docs '
+    + 'with the team. Returns {status, uris, project_id}.', {
+      uris:       { type: 'array',  description: 'Array of opencortex:// URIs to promote', required: true },
+      project_id: { type: 'string', description: 'Target project ID for shared scope', required: true },
+    }],
 
   // ── Lifecycle (routed internally, not proxied) ──
   recall: [null, null,
