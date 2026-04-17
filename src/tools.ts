@@ -175,7 +175,9 @@ export async function callProxyTool(
   }
 
   const hdrs = buildClientHeaders();
-  const opts: RequestInit = { method: method!, signal: AbortSignal.timeout(30000) };
+  const storeTools = new Set(['store', 'batch_store']);
+  const timeoutMs = storeTools.has(name) ? 300000 : 30000;
+  const opts: RequestInit = { method: method!, signal: AbortSignal.timeout(timeoutMs) };
   if (method === 'POST') {
     hdrs['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
