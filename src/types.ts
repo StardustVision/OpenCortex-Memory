@@ -78,5 +78,19 @@ export interface ScanItem {
 export interface ScanOutput {
   items: ScanItem[];
   source_path: string;
-  scan_meta: { total_files: number; has_git: boolean; project_id: string };
+  scan_meta: {
+    total_files: number;
+    discovered_files?: number;
+    total_bytes?: number;
+    skipped_files?: number;
+    skipped_bytes?: number;
+    skipped_too_large?: number;
+    skipped_unsupported?: number;
+    skipped_read_errors?: number;
+    truncated?: boolean;
+    max_files?: number;
+    max_total_bytes?: number;
+    has_git: boolean;
+    project_id: string;
+  };
 }
